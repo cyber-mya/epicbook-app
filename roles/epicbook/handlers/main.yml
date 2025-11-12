@@ -1,0 +1,6 @@
+
+---
+- name: Restart EpicBook Service
+  systemd:
+    name: epicbook
+    state: restarted

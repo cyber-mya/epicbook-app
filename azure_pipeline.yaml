@@ -1,0 +1,58 @@
+trigger:
+  branches:
+    include:
+      - main
+
+stages:
+  - stage: DeployApp
+    displayName: "Deploy Application via Ansible"
+    jobs:
+      - job: App_Deployment
+        displayName: "Run Ansible Playbook"
+        pool:
+          name: "Sel-fHosted-Pool"
+
+        steps:
+          # Install Ansible and dependencies
+          - script: |
+              sudo apt update -y
+              sudo apt install -y ansible sshpass
+              ansible --version
+            displayName: "Install Ansible & SSH dependencies"
+
+          # Download SSH private key stored as a secure file in Azure DevOps
+          - task: DownloadSecureFile@1
+            name: download_ssh_key
+            inputs:
+              secureFile: "azure_vm_key"
+
+          # Configure SSH for Ansible
+          - script: |
+              mkdir -p ~/.ssh
+              cp $(download_ssh_key.secureFilePath) ~/.ssh/azure_vm_key
+              chmod 600 ~/.ssh/azure_vm_key
+              echo "Host *" > ~/.ssh/config
+              echo "  StrictHostKeyChecking no" >> ~/.ssh/config
+              echo "  UserKnownHostsFile=/dev/null" >> ~/.ssh/config
+            displayName: "Setup SSH Key for Ansible"
+
+          # (Optional) Download group_vars or other secret Ansible files
+          - task: DownloadSecureFile@1
+            name: download_app_vars
+            inputs:
+              secureFile: "web.yml.txt"
+
+          # Rename secret file to proper name
+          - script: |
+              mv $(download_app_vars.secureFilePath) epicbook-app/group_vars/web.yml
+            displayName: "Rename group_vars file"
+
+          # Run Ansible playbook
+          - script: |
+              cd epicbook-app
+              ansible-playbook -i inventory.ini site.yml \
+                --private-key ~/.ssh/azure_vm_key \
+                --ssh-extra-args "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+            displayName: "Run Ansible Playbook"
+            env:
+              ANSIBLE_HOST_KEY_CHECKING: "False"
