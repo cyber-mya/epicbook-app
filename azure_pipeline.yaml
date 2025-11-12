@@ -44,7 +44,7 @@ stages:
 
           # Rename secret file to proper name
           - script: |
-              mv $(download_app_vars.secureFilePath)group_vars/web.yml
+              mv $(download_app_vars.secureFilePath) group_vars/web.yml
             displayName: "Rename group_vars file"
 
           # Run Ansible playbook
