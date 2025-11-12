@@ -37,10 +37,10 @@ stages:
             displayName: "Setup SSH Key for Ansible"
 
           # (Optional) Download group_vars or other secret Ansible files
-          - task: DownloadSecureFile@1
-            name: download_app_vars
-            inputs:
-              secureFile: "web.yml.txt"
+          #- task: DownloadSecureFile@1
+           # name: download_app_vars
+            #inputs:
+             # secureFile: "web.yml.txt"
 
           # Rename secret file to proper name
           - script: |
