@@ -1,2 +1,12 @@
-frontend_repo_url: https://github.com/cyber-mya/theepicbook.git
+app_name: epicbook
+app_env: production
+app_dir: /opt/epicbook
+nginx_port: 80
 
+# Database credentials for Ansible playbook
+db_host: epicbook-db.mysql.database.azure.com 
+db_username: mysqladmin
+db_password: DevSecureDBPassword123!
+db_name: epicbook_dev
+
+epicbook_repo: https://github.com/cyber-mya/theepicbook.git
