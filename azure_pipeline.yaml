@@ -37,14 +37,14 @@ stages:
             displayName: "Setup SSH Key for Ansible"
 
           # (Optional) Download group_vars or other secret Ansible files
-          #- task: DownloadSecureFile@1
-           # name: download_app_vars
-            #inputs:
-             # secureFile: "web.yml.txt"
+          - task: DownloadSecureFile@1
+            name: download_app_vars
+            inputs:
+              secureFile: "web.yml.txt"
 
           # Rename secret file to proper name
           - script: |
-              mv $(download_app_vars.secureFilePath) epicbook-app/group_vars/web.yml
+              mv $(download_app_vars.secureFilePath)group_vars/web.yml
             displayName: "Rename group_vars file"
 
           # Run Ansible playbook
