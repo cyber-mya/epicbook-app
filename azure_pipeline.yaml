@@ -10,7 +10,7 @@ stages:
       - job: App_Deployment
         displayName: "Run Ansible Playbook"
         pool:
-          name: "Sel-fHosted-Pool"
+          name: "Self-Hosted-Pool"
 
         steps:
           # Install Ansible and dependencies
