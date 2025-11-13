@@ -31,6 +31,12 @@
     state: present
     update_cache: yes
 
+- name: Ensure npm binary is in /usr/local/bin (fix PATH issue)
+  file:
+    src: /usr/bin/npm
+    dest: /usr/local/bin/npm
+    state: link
+
 - name: Verify Node.js installation
   command: node -v
   register: node_version
