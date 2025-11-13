@@ -16,18 +16,36 @@
       - build-essential
     state: present
 
-- name: Install Node.js 18
+- name: Install Node.js 18 and npm
+  become: yes
+  apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: yes
+
+- name: Add NodeSource repository for Node.js 18
   become: yes
   shell: |
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt-get install -y nodejs
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
   args:
     executable: /bin/bash
 
-- name: Check Node.js version
-  command: node -v
-  register: node_version
+- name: Install Node.js 18
+  become: yes
+  apt:
+    name: nodejs
+    state: present
+    update_cache: yes
+
+- name: Verify Node.js and npm installation
+  become: yes
+  shell: |
+    node -v && npm -v
+  register: node_check
   changed_when: false
 
 - debug:
-    msg: "Node.js version installed: {{ node_version.stdout }}"
+    msg: "Installed Node.js and npm versions: {{ node_check.stdout_lines }}"
