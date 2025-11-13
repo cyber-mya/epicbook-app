@@ -1,12 +1,10 @@
 ---
 - name: Update and upgrade packages
-  become: yes
   apt:
     update_cache: yes
     upgrade: yes
 
-- name: Install common packages
-  become: yes
+- name: Install base packages
   apt:
     name:
       - nginx
@@ -14,38 +12,35 @@
       - mysql-client
       - curl
       - build-essential
-    state: present
-
-- name: Install Node.js 18 and npm
-  become: yes
-  apt:
-    name:
       - ca-certificates
-      - curl
       - gnupg
     state: present
     update_cache: yes
 
 - name: Add NodeSource repository for Node.js 18
-  become: yes
   shell: |
     curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
   args:
     executable: /bin/bash
 
 - name: Install Node.js 18
-  become: yes
   apt:
     name: nodejs
     state: present
     update_cache: yes
 
 - name: Verify Node.js and npm installation
-  become: yes
-  shell: |
-    node -v && npm -v
-  register: node_check
+  command: node -v
+  register: node_version
   changed_when: false
 
 - debug:
-    msg: "Installed Node.js and npm versions: {{ node_check.stdout_lines }}"
+    msg: "Node.js version: {{ node_version.stdout }}"
+
+- name: Verify npm installation
+  command: npm -v
+  register: npm_version
+  changed_when: false
+
+- debug:
+    msg: "npm version: {{ npm_version.stdout }}"
