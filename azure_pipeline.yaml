@@ -44,12 +44,12 @@ stages:
 
           # Rename secret file to proper name
           - script: |
-              mv $(download_app_vars.secureFilePath) ansible/group_vars/web.yml
+              mv $(download_app_vars.secureFilePath) group_vars/web.yml
             displayName: "Rename group_vars file"
 
           # Run Ansible playbook
           - script: |
-              cd ansible
+              
               ansible-playbook -i inventory.ini site.yml \
                 --private-key ~/.ssh/azure_vm_key \
                 --ssh-extra-args "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
