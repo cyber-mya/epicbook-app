@@ -1,67 +1,112 @@
----
-# ======================
-# 1. Install Node.js + npm
-# ======================
-- name: Add NodeSource 18.x repository
-  shell: curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-  args:
-    warn: false
+ # ----------------------------
+    # Application setup
+    # ----------------------------
+    - name: Remove old EpicBook directory
+      file:
+        path: "{{ app_dir }}"
+        state: absent
 
-- name: Install Node.js
-  apt:
-    name: nodejs
-    state: present
-    update_cache: yes
+    - name: Clone EpicBook repo
+      git:
+        repo: "{{ epicbook_repo }}"
+        dest: "{{ app_dir }}"
+        version: main
 
-# ======================
-# 2. Prepare Application Directory
-# ======================
-- name: Remove old EpicBook directory
-  file:
-    path: "{{ app_dir }}"
-    state: absent
+    - name: Install Node.js dependencies
+      npm:
+        path: "{{ app_dir }}"
+        production: yes
 
-- name: Clone EpicBook repo
-  git:
-    repo: "{{ epicbook_repo }}"
-    dest: "{{ app_dir }}"
-    version: main
+    - name: Create environment file
+      copy:
+        dest: "{{ app_dir }}/.env"
+        content: |
+          DB_HOST={{ db_host }}
+          DB_USER={{ db_username }}
+          DB_PASSWORD={{ db_password }}
+          DB_NAME={{ db_name }}
+          DB_PORT=3306
+          NODE_ENV=production
+          PORT=8080
+      notify: Restart EpicBook Service
 
-# ======================
-# 3. Install Dependencies
-# ======================
-- name: Install Node.js dependencies
-  npm:
-    path: "{{ app_dir }}"
-    production: yes
+    - name: Update config.json with all environments
+      copy:
+        dest: "{{ app_dir }}/config/config.json"
+        content: |
+          {
+            "development": {
+              "username": "{{ db_username }}",
+              "password": "{{ db_password }}",
+              "database": "{{ db_name }}",
+              "host": "{{ db_host }}",
+              "dialect": "mysql"
+            },
+            "test": {
+              "username": "{{ db_username }}",
+              "password": "{{ db_password }}",
+              "database": "{{ db_name }}",
+              "host": "{{ db_host }}",
+              "dialect": "mysql"
+            },
+            "production": {
+              "username": "{{ db_username }}",
+              "password": "{{ db_password }}",
+              "database": "{{ db_name }}",
+              "host": "{{ db_host }}",
+              "dialect": "mysql"
+            }
+          }
+      notify: Restart EpicBook Service
 
-# ======================
-# 4. Build the Application
-# ======================
-- name: Build the React application
-  shell: npm run build
-  args:
-    chdir: "{{ app_dir }}"
+    # ----------------------------
+    # Database setup
+    # ----------------------------
+    - name: Ensure MySQL database exists
+      mysql_db:
+        name: "{{ db_name }}"
+        state: present
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_username }}"
+        login_password: "{{ db_password }}"
+        ssl_mode: REQUIRED
 
-# ======================
-# 5. Set Up Nginx
-# ======================
-- name: Install Nginx
-  apt:
-    name: nginx
-    state: present
-    update_cache: yes
+    - name: Seed database
+      shell: |
+        mysql -h {{ db_host }} -u {{ db_username }} -p{{ db_password }} --ssl-mode=REQUIRED {{ db_name }} < db/BuyTheBook_Schema.sql
+        mysql -h {{ db_host }} -u {{ db_username }} -p{{ db_password }} --ssl-mode=REQUIRED {{ db_name }} < db/author_seed.sql
+        mysql -h {{ db_host }} -u {{ db_username }} -p{{ db_password }} --ssl-mode=REQUIRED {{ db_name }} < db/books_seed.sql
+      args:
+        chdir: "{{ app_dir }}"
+      ignore_errors: yes
 
-- name: Copy build files to nginx directory
-  copy:
-    src: "{{ app_dir }}/build/"
-    dest: /var/www/html/
-    owner: www-data
-    group: www-data
-    mode: '0755'
-    remote_src: yes
+    # ----------------------------
+    # Systemd service for EpicBook
+    # ----------------------------
+    - name: Create systemd service for EpicBook
+      copy:
+        dest: /etc/systemd/system/epicbook.service
+        content: |
+          [Unit]
+          Description=EpicBook Backend Service
+          After=network.target
 
-- name: Restart nginx
-  service:
-    name: nginx
-    state: restarted
+          [Service]
+          Type=simple
+          User=root
+          WorkingDirectory={{ app_dir }}
+          ExecStart=/usr/bin/node server.js
+          Restart=on-failure
+          Environment=NODE_ENV=production
+          EnvironmentFile={{ app_dir }}/.env
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: Restart EpicBook Service
+
+    - name: Enable and start EpicBook service
+      systemd:
+        name: epicbook
+        enabled: yes
+        state: started
+        daemon_reload: yes

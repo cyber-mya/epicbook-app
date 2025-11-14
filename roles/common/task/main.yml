@@ -4,7 +4,7 @@
     update_cache: yes
     upgrade: yes
 
-- name: Install base packages
+- name: Install common packages
   apt:
     name:
       - nginx
@@ -12,43 +12,31 @@
       - mysql-client
       - curl
       - build-essential
-      - ca-certificates
-      - gnupg
     state: present
-    update_cache: yes
 
-- name: Add NodeSource repository for Node.js 18
+- name: Install Node.js 18
   shell: |
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    apt-get install -y nodejs
   args:
     executable: /bin/bash
 
-- name: Install Node.js and npm
-  apt:
-    name:
-      - nodejs
-      - npm
-    state: present
-    update_cache: yes
-
-- name: Ensure npm binary is in /usr/local/bin (fix PATH issue)
-  file:
-    src: /usr/bin/npm
-    dest: /usr/local/bin/npm
-    state: link
-
-- name: Verify Node.js installation
+- name: Check Node.js version
   command: node -v
   register: node_version
   changed_when: false
 
 - debug:
-    msg: "Node.js version: {{ node_version.stdout }}"
+    msg: "Node.js version installed: {{ node_version.stdout }}"
 
-- name: Verify npm installation
-  command: npm -v
-  register: npm_version
-  changed_when: false
 
-- debug:
-    msg: "npm version: {{ npm_version.stdout }}"
+- name: Ensure Python3 pip is installed
+  apt:
+    name: python3-pip
+    state: present
+    update_cache: yes
+
+- name: Install PyMySQL for Python3
+  pip:
+    name: PyMySQL
+    executable: pip3
