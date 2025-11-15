@@ -1,105 +1,125 @@
- # ----------------------------
-    # Application setup
-    # ----------------------------
-    - name: Remove old EpicBook directory
-      file:
-        path: "{{ app_dir }}"
-        state: absent
+# ----------------------------
+# Prerequisites
+# ----------------------------
 
-    - name: Clone EpicBook repo
-      git:
-        repo: "{{ epicbook_repo }}"
-        dest: "{{ app_dir }}"
-        version: main
+- name: Ensure Python3 and pip are installed
+  apt:
+    name:
+      - python3
+      - python3-pip
+    state: present
+    update_cache: yes
 
-    - name: Install Node.js dependencies
-      npm:
-        path: "{{ app_dir }}"
-        production: yes
+- name: Install PyMySQL for Ansible MySQL modules
+  pip:
+    name: PyMySQL
+    executable: pip3
 
-    - name: Create environment file
-      copy:
-        dest: "{{ app_dir }}/.env"
-        content: |
-          DB_HOST={{ db_host }}
-          DB_USER={{ db_username }}
-          DB_PASSWORD={{ db_password }}
-          DB_NAME={{ db_name }}
-          DB_PORT=3306
-          NODE_ENV=production
-          PORT=8080
-      notify: Restart EpicBook Service
 
-    - name: Update config.json with all environments
-      copy:
-        dest: "{{ app_dir }}/config/config.json"
-        content: |
-          {
-            "development": {
-              "username": "{{ db_username }}",
-              "password": "{{ db_password }}",
-              "database": "{{ db_name }}",
-              "host": "{{ db_host }}",
-              "dialect": "mysql"
-            },
-            "test": {
-              "username": "{{ db_username }}",
-              "password": "{{ db_password }}",
-              "database": "{{ db_name }}",
-              "host": "{{ db_host }}",
-              "dialect": "mysql"
-            },
-            "production": {
-              "username": "{{ db_username }}",
-              "password": "{{ db_password }}",
-              "database": "{{ db_name }}",
-              "host": "{{ db_host }}",
-              "dialect": "mysql"
-            }
-          }
-      notify: Restart EpicBook Service
+# ----------------------------
+# Application setup
+# ----------------------------
 
-    # ----------------------------
-    # Database setup
-    # ----------------------------
-    - name: Ensure MySQL database exists
-      mysql_db:
-        name: "{{ db_name }}"
-        state: present
-        login_host: "{{ db_host }}"
-        login_user: "{{ db_username }}"
-        login_password: "{{ db_password }}"
-      
+- name: Remove old EpicBook directory
+  file:
+    path: "{{ app_dir }}"
+    state: absent
 
-   
+- name: Clone EpicBook repo
+  git:
+    repo: "{{ epicbook_repo }}"
+    dest: "{{ app_dir }}"
+    version: main
 
-    # ----------------------------
-    # Systemd service for EpicBook
-    # ----------------------------
-    - name: Create systemd service for EpicBook
-      copy:
-        dest: /etc/systemd/system/epicbook.service
-        content: |
-          [Unit]
-          Description=EpicBook Backend Service
-          After=network.target
+- name: Install Node.js dependencies
+  npm:
+    path: "{{ app_dir }}"
+    production: yes
 
-          [Service]
-          Type=simple
-          User=root
-          WorkingDirectory={{ app_dir }}
-          ExecStart=/usr/bin/node server.js
-          Restart=on-failure
-          Environment=NODE_ENV=production
-          EnvironmentFile={{ app_dir }}/.env
+- name: Create environment file
+  copy:
+    dest: "{{ app_dir }}/.env"
+    content: |
+      DB_HOST={{ db_host }}
+      DB_USER={{ db_username }}
+      DB_PASSWORD={{ db_password }}
+      DB_NAME={{ db_name }}
+      DB_PORT=3306
+      NODE_ENV=production
+      PORT=8080
+  notify: Restart EpicBook Service
 
-          [Install]
-          WantedBy=multi-user.target
-      notify: Restart EpicBook Service
+- name: Update config.json with all environments
+  copy:
+    dest: "{{ app_dir }}/config/config.json"
+    content: |
+      {
+        "development": {
+          "username": "{{ db_username }}",
+          "password": "{{ db_password }}",
+          "database": "{{ db_name }}",
+          "host": "{{ db_host }}",
+          "dialect": "mysql"
+        },
+        "test": {
+          "username": "{{ db_username }}",
+          "password": "{{ db_password }}",
+          "database": "{{ db_name }}",
+          "host": "{{ db_host }}",
+          "dialect": "mysql"
+        },
+        "production": {
+          "username": "{{ db_username }}",
+          "password": "{{ db_password }}",
+          "database": "{{ db_name }}",
+          "host": "{{ db_host }}",
+          "dialect": "mysql"
+        }
+      }
+  notify: Restart EpicBook Service
 
-    - name: Enable and start EpicBook service
-      systemd:
-        name: epicbook
-        enabled: yes
-        state: started
-        daemon_reload: yes
+
+# ----------------------------
+# Database setup
+# ----------------------------
+
+- name: Ensure MySQL database exists
+  mysql_db:
+    name: "{{ db_name }}"
+    state: present
+    login_host: "{{ db_host }}"
+    login_user: "{{ db_username }}"
+    login_password: "{{ db_password }}"
+
+
+# ----------------------------
+# Systemd Service
+# ----------------------------
+
+- name: Create systemd service for EpicBook
+  copy:
+    dest: /etc/systemd/system/epicbook.service
+    content: |
+      [Unit]
+      Description=EpicBook Backend Service
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=root
+      WorkingDirectory={{ app_dir }}
+      ExecStart=/usr/bin/node server.js
+      Restart=on-failure
+      Environment=NODE_ENV=production
+      EnvironmentFile={{ app_dir }}/.env
+
+      [Install]
+      WantedBy=multi-user.target
+  notify: Restart EpicBook Service
+
+- name: Enable and start EpicBook service
+  systemd:
+    name: epicbook
+    enabled: yes
+    state: started
+    daemon_reload: yes
